@@ -1,8 +1,7 @@
 package klim.draph.client;
 
 import com.google.common.base.Supplier;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
+import com.google.gson.Gson;
 import com.google.protobuf.ByteString;
 import io.dgraph.DgraphGrpc.DgraphStub;
 import io.dgraph.DgraphProto;
@@ -24,8 +23,9 @@ import static java.util.Collections.emptyMap;
 public abstract class AbstractClient {
 
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractClient.class);
+    private static final Class<String> STRING_CLASS = String.class;
 
-    protected static final JsonParser PARSER = new JsonParser();
+    protected static final Gson PARSER = new Gson();
 
     abstract TransactionState getState();
 
@@ -34,10 +34,11 @@ public abstract class AbstractClient {
     abstract void mergeContext(TxnContext conext);
 
     abstract Mutation newMutation(BiConsumer<Mutation.Builder, NQuad> aggregator, NQuad... nQuads);
+
     abstract Mutation newMutation(BiConsumer<Mutation.Builder, ByteString> stringNQuadSetter, String nQuads);
 
 
-    public CompletableFuture<JsonObject> query(String query, Map<String, String> variables) {
+    public <T> CompletableFuture<T> query(String query, Map<String, String> variables, Class<T> type) {
         TransactionState state = getState();
 
         DgraphProto.LinRead linRead = DgraphProto.LinRead.newBuilder()
@@ -58,17 +59,22 @@ public abstract class AbstractClient {
         return bridge.getDelegate()
                 .thenApply((DgraphProto.Response response) -> {
                     mergeContext(response.getTxn());
-                    return PARSER.parse(response.getJson().toStringUtf8()).getAsJsonObject();
+
+                    String utf8Str = response.getJson().toStringUtf8();
+                    if (STRING_CLASS.equals(type)) {
+                        return (T)utf8Str;
+                    }
+                    return PARSER.fromJson(utf8Str, type);
                 });
     }
 
-    public CompletableFuture<JsonObject> query(String query) {
-        return query(query, emptyMap());
+    public <T> CompletableFuture<T> query(String query, Class<T> type) {
+        return query(query, emptyMap(), type);
     }
 
-    public CompletableFuture<JsonObject> query(Supplier<Query> queryFactory) {
+    public <T> CompletableFuture<T> query(Supplier<Query> queryFactory, Class<T> type) {
         Query query = queryFactory.get();
-        return query(query.getQuery(), query.getVariables());
+        return query(query.getQuery(), query.getVariables(), type);
     }
 
     protected CompletableFuture<Map<String, String>> mutate(Mutation mutation) {
