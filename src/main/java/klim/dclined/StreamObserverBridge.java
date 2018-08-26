@@ -13,12 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package klim.draph.client;
+package klim.dclined;
 
 import io.grpc.stub.StreamObserver;
 
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * @author Michail Klimenkov
+ * @param <T> the return type
+ */
 public class StreamObserverBridge<T> implements StreamObserver<T> {
 
     private final CompletableFuture<T> delegate = new CompletableFuture<>();

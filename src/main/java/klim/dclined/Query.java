@@ -1,9 +1,12 @@
-package klim.draph.client;
+package klim.dclined;
 
 import java.util.Map;
 
 import static java.util.Collections.emptyMap;
 
+/**
+ * @author Michail Klimenkov
+ */
 public class Query {
     private final String query;
     private final Map<String, String> variables;

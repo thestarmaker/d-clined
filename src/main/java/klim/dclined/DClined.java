@@ -1,7 +1,6 @@
-package klim.draph.client;
+package klim.dclined;
 
 import com.google.protobuf.ByteString;
-import io.dgraph.DgraphGrpc;
 import io.dgraph.DgraphGrpc.DgraphStub;
 import io.dgraph.DgraphProto;
 import io.dgraph.DgraphProto.Mutation;
@@ -9,36 +8,31 @@ import io.dgraph.DgraphProto.NQuad;
 import io.dgraph.DgraphProto.Operation;
 import io.dgraph.DgraphProto.TxnContext;
 
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.BiConsumer;
 
-import static klim.draph.client.Helpers.mergeIdMaps;
+import static klim.dclined.Helpers.mergeIdMaps;
 
-public class DGraphClient extends AbstractClient {
-    private final List<DgraphStub> stubs;
+/**
+ * @author Michail Klimenkov
+ */
+public class DClined extends AbstractClient {
+    private final DgraphStub stub;
 
     private Map<Integer, Long> idsMap = Collections.emptyMap();
 
-    public DGraphClient(DgraphStub... stubs) {
-        this.stubs = Arrays.asList(stubs);
+    public DClined(DgraphStub stub) {
+        this.stub = stub;
     }
 
     public Transaction newTransaction() {
-        return new Transaction(anyStub(), this::updateIdsMap, idsMap);
+        return new Transaction(stub, this::updateIdsMap, idsMap);
     }
 
     private synchronized void updateIdsMap(Map<Integer, Long> update) {
         this.idsMap = mergeIdMaps(update, idsMap);
-    }
-
-    private DgraphStub anyStub() {
-        int index = ThreadLocalRandom.current().nextInt(stubs.size());
-        return stubs.get(index);
     }
 
     private CompletableFuture<Void> alter(Operation op) {
@@ -79,7 +73,7 @@ public class DGraphClient extends AbstractClient {
 
     @Override
     protected DgraphStub getStub() {
-        return anyStub();
+        return stub;
     }
 
     @Override

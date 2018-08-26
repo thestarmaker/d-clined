@@ -1,12 +1,11 @@
-package klim.draph.client;
+package klim.dclined;
 
+import com.google.gson.annotations.SerializedName;
+import com.google.gson.reflect.TypeToken;
 import io.dgraph.DgraphGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
 
 import java.util.List;
 import java.util.Map;
@@ -15,12 +14,17 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
+import static java.util.Collections.emptyList;
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * @author Michail Klimenkov
+ */
+@Disabled
 public class TransactionalityTest {
 
-    private static ManagedChannel channel;
-    private static DGraphClient client;
+    protected static ManagedChannel channel;
+    protected static DClined client;
 
     @BeforeAll
     public static void prepare() {
@@ -28,7 +32,7 @@ public class TransactionalityTest {
                 .usePlaintext()
                 .build();
         DgraphGrpc.DgraphStub stub = DgraphGrpc.newStub(channel);
-        client = new DGraphClient(stub);
+        client = new DClined(stub);
     }
 
     @BeforeEach
@@ -42,7 +46,7 @@ public class TransactionalityTest {
     }
 
     @Test
-    public void testTransactionality() throws ExecutionException, InterruptedException {
+    public void testVisibility() throws ExecutionException, InterruptedException {
         client.schema("person.email: string @index(hash) .").join();
 
         Transaction transaction = client.newTransaction();
@@ -80,7 +84,7 @@ public class TransactionalityTest {
     }
 
     @Test
-    public void testTransactionConflictsTransaction() throws ExecutionException, InterruptedException {
+    public void testConflict_TransactionOverlapsTransaction() throws ExecutionException, InterruptedException {
         client.schema("person.username: string @index(hash) . \n" +
                 "person.email: string . ").join();
 
@@ -105,15 +109,39 @@ public class TransactionalityTest {
         //then early transaction commits
         earlyTrans.commit().join();
         //then
-        lateTrans.commit().handle((Void aVoid, Throwable throwable) -> {
-            assertThrows(CompletionException.class, () -> {
-                throw throwable;
-            });
-            assertThrows(TransactionAbortedException.class, () -> {
-                throw throwable.getCause();
-            });
-            return null;
-        }).join();
+        lateTrans.commit()
+                .handle(this::assertTransactionAbortedExceptionHappened)
+                .join();
+    }
+
+    @Test
+    public void testConflict_TransactionEnclosesTransaction() throws ExecutionException, InterruptedException {
+        client.schema("person.username: string @index(hash) . \n" +
+                "person.email: string . ").join();
+
+        client.set("_:person <person.username> \"starmaker\" .").join();
+
+        final String getPersonByUsername = "{ starm(func: eq(person.username, \"starmaker\")) { uid person.username person.email} }";
+
+        Transaction outerTrans = client.newTransaction();
+        Map<String, List<Map<String, String>>> person = outerTrans.query(getPersonByUsername, Map.class).get();
+        assertFalse(person.get("starm").isEmpty());
+
+        final String uid = person.get("starm").get(0).get("uid");
+
+        Transaction innerTrans = client.newTransaction();
+        person = innerTrans.query(getPersonByUsername, Map.class).get();
+        assertFalse(person.get("starm").isEmpty());
+
+        //inner transaction writes and commits
+        innerTrans.set(format("<%s> <person.email> \"starmaker@mail.com\" .", uid)).join();
+        innerTrans.commit().join();
+
+        //then outer transaction writes and commits
+        outerTrans.set(format("<%s> <person.email> \"starmaker@mail.com\" .", uid)).join();
+        outerTrans.commit()
+                .handle(this::assertTransactionAbortedExceptionHappened)
+                .join();
     }
 
     @Test
@@ -147,20 +175,75 @@ public class TransactionalityTest {
     }
 
     @Test
-    public void testCommitAfterAbort() {
+    public void testCommitAfterAbort() throws ExecutionException, InterruptedException {
         client.schema("person.email: string @index(hash) .").join();
         Transaction transaction = client.newTransaction();
         transaction.set("_:person <person.email> \"starmaker@mail.com\" .").join();
+
+        final String getPersonByEmail = "{ starm(func: eq(person.email, \"starmaker@mail.com\")) { person.email} }";
+
+        Map<String, List<Map<String, String>>> person = transaction.query(getPersonByEmail, Map.class).get();
+        assertFalse(person.get("starm").isEmpty());
+
         transaction.abort().join();
         transaction.commit()
-                .handle((Void aVoid, Throwable throwable) -> {
-                    assertThrows(CompletionException.class, () -> {
-                        throw throwable;
-                    });
-                    assertThrows(TransactionAbortedException.class, () -> {
-                        throw throwable.getCause();
-                    });
-                    return null;
-                }).join();
+                .handle(this::assertTransactionAbortedExceptionHappened)
+                .join();
+
+        person = transaction.query(getPersonByEmail, Map.class).get();
+        assertTrue(person.get("starm").isEmpty());
+    }
+
+    @Test
+    public void testUpsert() {
+        //NOTE: @upsert directive is essential for index conflict detection
+        client.schema("person.email: string @index(hash) @upsert .").join();
+
+        final String getPersonByEmail = "{ starm(func: eq(person.email, \"starmaker@mail.com\")) { person.email} }";
+
+        Class<Map<String, List<Person>>> responseType = (Class<Map<String, List<Person>>>) new TypeToken<Map<String, List<Person>>>() {
+        }.getRawType();
+
+        Transaction transaction = client.newTransaction();
+        transaction.query(getPersonByEmail, responseType)
+                .thenCompose((Map<String, List<Person>> response) -> {
+                    //if the person with the email does not exist, create one
+                    if (response.getOrDefault("starm", emptyList()).isEmpty()) {
+
+                        //pretend there is some other chicky write happening in the meantime
+                        client.set("_:person <person.email> \"starmaker@mail.com\" .").join();
+
+                        //create the new person as assumed by the IF statement
+                        return transaction.set("_:person <person.email> \"starmaker@mail.com\" .");
+                    }
+                    throw new RuntimeException("User already exists");
+                }).thenCompose((assigned) -> {
+            return transaction.commit();
+        }).handle(this::assertTransactionAbortedExceptionHappened)
+                .join();
+
+    }
+
+    public static class Person {
+        @SerializedName("person.email")
+        private final String email;
+
+        public Person(String email) {
+            this.email = email;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+    }
+
+    private Void assertTransactionAbortedExceptionHappened(Void aVoid, Throwable throwable) {
+        assertThrows(CompletionException.class, () -> {
+            throw throwable;
+        });
+        assertThrows(TransactionAbortedException.class, () -> {
+            throw throwable.getCause();
+        });
+        return null;
     }
 }

@@ -1,4 +1,4 @@
-package klim.draph.client;
+package klim.dclined;
 
 import io.dgraph.DgraphProto;
 
@@ -7,8 +7,11 @@ import java.util.List;
 import java.util.Map;
 
 import static java.util.Collections.emptyList;
-import static klim.draph.client.Helpers.mergeIdMaps;
+import static klim.dclined.Helpers.mergeIdMaps;
 
+/**
+ * @author Michail Klimenkov
+ */
 public class TransactionState {
     private final Map<Integer, Long> idsMap;
     private final long startTs;

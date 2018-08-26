@@ -1,4 +1,4 @@
-package klim.draph.client;
+package klim.dclined;
 
 import com.google.common.base.Supplier;
 import com.google.gson.Gson;
@@ -20,6 +20,9 @@ import java.util.function.BiConsumer;
 
 import static java.util.Collections.emptyMap;
 
+/**
+ * @author Michail Klimenkov
+ */
 public abstract class AbstractClient {
 
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractClient.class);
@@ -62,7 +65,7 @@ public abstract class AbstractClient {
 
                     String utf8Str = response.getJson().toStringUtf8();
                     if (STRING_CLASS.equals(type)) {
-                        return (T)utf8Str;
+                        return (T) utf8Str;
                     }
                     return PARSER.fromJson(utf8Str, type);
                 });
@@ -134,7 +137,16 @@ public abstract class AbstractClient {
         return bridge.getDelegate()
                 .handle((TxnContext ctx, Throwable throwable) -> {
                     if (throwable != null) {
-                        LOG.warn("Exception while aborting transaction", throwable);
+                        if (throwable instanceof StatusRuntimeException) {
+                            StatusRuntimeException statusRuntimeEx = (StatusRuntimeException) throwable;
+
+                            //dgraph returns ABORTED status even when user explicitly asks for abort
+                            if (!Status.Code.ABORTED.equals(statusRuntimeEx.getStatus().getCode())) {
+                                LOG.warn("Exception while aborting transaction", throwable);
+                            }
+                        } else {
+                            LOG.warn("Exception while aborting transaction", throwable);
+                        }
                     }
                     return null;
                 });

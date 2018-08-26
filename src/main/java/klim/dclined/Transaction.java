@@ -1,4 +1,4 @@
-package klim.draph.client;
+package klim.dclined;
 
 import com.google.protobuf.ByteString;
 import io.dgraph.DgraphGrpc.DgraphStub;
@@ -14,7 +14,9 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
-
+/**
+ * @author Michail Klimenkov
+ */
 public class Transaction extends AbstractClient {
 
     private final DgraphStub stub;
