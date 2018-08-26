@@ -1,7 +1,7 @@
 # D-clined: Alternative DGraph Java client #
 ## Motivation ##
 This is ~~sane~~ an alternative Java implementation of [DGraph client](https://github.com/dgraph-io/dgraph4j) aiming to provide cleaner and more fluid API as well as to get around lengthy pull request approval process. 
-Neither this project or nor the author beard any affiliation with DGraph.
+Neither this project nor the author bear any affiliation with DGraph.
 
 I will roll it the way I like, take it or leave it! :stuck_out_tongue_winking_eye:
 ## Usage ## 
