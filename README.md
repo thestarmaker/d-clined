@@ -3,12 +3,13 @@
 The this is ~~sane~~ an alternative Java implementation of [DGraph client](https://github.com/dgraph-io/dgraph4j) aiming to provide cleaner and more fluid API as well as to get around lengthy pull request approval process. 
 Neither this project or nor the author beard any affiliation with DGraph.
 
+I will roll it the way I like, take it or leave it! :stuck_out_tongue_winking_eye:
 ## Usage ## 
 ### How do I get it to my project? ###
 I have not published it to Maven Central yet, so you have to build it yourself.
 
 ### How do I build it locally? ###
-__IMPORTANT - tests assume you have local instance of DGraph running on localhost:9080 and the will wipe out all data in database!__
+__IMPORTANT - tests assume you have local instance of DGraph running on localhost:9080 and will wipe out all data in database!__
 Project is assembled in Maven (why not?), so run:
 ```
 mvn clean install
@@ -16,7 +17,7 @@ mvn clean install
 This puts the artifact to your local repository, then just bring it to your project:
 ```
 <dependency>
-    <groupId>klim.dgraph.client</groupId>
+    <groupId>klim.dclined</groupId>
     <artifactId>d-clined</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 </dependency>
@@ -91,5 +92,6 @@ D-clined used [Gson](https://github.com/google/gson/) for deserialisation; all G
 You don't. This is not supported as yet because there is more to this: 
 * What happens if one of the configured servers goes offline?
 * What happens if it never returns?
- D-clined assumes this is your responsibility to provide load balancing across multiple DGraph instances, hence D-clined can be configured with only one network address - one that probably should direct to load balancer.
+
+D-clined assumes this is your responsibility to provide load balancing across multiple DGraph instances, hence D-clined can be configured with only one network address - one that probably should direct to load balancer.
  

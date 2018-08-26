@@ -42,6 +42,7 @@ public class TransactionalityTest {
 
     @AfterAll
     public static void destroy() throws InterruptedException {
+        client.dropAll().join();
         channel.awaitTermination(5, TimeUnit.SECONDS);
     }
 
