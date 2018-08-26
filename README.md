@@ -1,6 +1,6 @@
 # D-clined: Alternative DGraph Java client #
 ## Motivation ##
-The this is ~~sane~~ an alternative Java implementation of [DGraph client](https://github.com/dgraph-io/dgraph4j) aiming to provide cleaner and more fluid API as well as to get around lengthy pull request approval process. 
+This is ~~sane~~ an alternative Java implementation of [DGraph client](https://github.com/dgraph-io/dgraph4j) aiming to provide cleaner and more fluid API as well as to get around lengthy pull request approval process. 
 Neither this project or nor the author beard any affiliation with DGraph.
 
 I will roll it the way I like, take it or leave it! :stuck_out_tongue_winking_eye:
@@ -86,7 +86,7 @@ transaction.query(getPersonByEmail, responseType)
 If at any time during the transaction any other transaction manages to sneak in a person with the same email address, then the given transaction would abort with TransactionAbortedException.
 
 ### How do I deserialise responses to custom types? ###
-D-clined used [Gson](https://github.com/google/gson/) for deserialisation; all Gson annotations should also be supported.
+D-clined uses [Gson](https://github.com/google/gson/) for deserialisation; all Gson annotations should also be supported.
 
 ### How do I configure D-clined to connect to multiple DGraph servers? ###
 You don't. This is not supported as yet because there is more to this: 
