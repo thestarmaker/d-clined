@@ -20,7 +20,6 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * @author Michail Klimenkov
  */
-@Disabled
 public class TransactionalityTest {
 
     protected static ManagedChannel channel;
