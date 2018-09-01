@@ -1,13 +1,16 @@
 package klim.dclined;
 
 import com.google.protobuf.ByteString;
+import io.dgraph.DgraphGrpc;
 import io.dgraph.DgraphGrpc.DgraphStub;
 import io.dgraph.DgraphProto;
 import io.dgraph.DgraphProto.Mutation;
 import io.dgraph.DgraphProto.NQuad;
 import io.dgraph.DgraphProto.Operation;
 import io.dgraph.DgraphProto.TxnContext;
+import io.grpc.ManagedChannel;
 
+import java.io.Closeable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -18,13 +21,15 @@ import static klim.dclined.Helpers.mergeIdMaps;
 /**
  * @author Michail Klimenkov
  */
-public class DClined extends AbstractClient {
+public class DClined extends AbstractClient implements Closeable {
+    private final ManagedChannel channel;
     private final DgraphStub stub;
 
     private Map<Integer, Long> idsMap = Collections.emptyMap();
 
-    public DClined(DgraphStub stub) {
-        this.stub = stub;
+    public DClined(ManagedChannel channel) {
+        this.channel = channel;
+        this.stub = DgraphGrpc.newStub(channel);
     }
 
     public Transaction newTransaction() {
@@ -96,5 +101,10 @@ public class DClined extends AbstractClient {
         Mutation.Builder builder = Mutation.newBuilder();
         stringNQuadSetter.accept(builder, ByteString.copyFromUtf8(nQuads));
         return builder.setCommitNow(true).build();
+    }
+
+    @Override
+    public void close() {
+        channel.shutdown();
     }
 }

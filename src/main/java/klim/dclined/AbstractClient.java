@@ -10,6 +10,7 @@ import io.dgraph.DgraphProto.NQuad;
 import io.dgraph.DgraphProto.TxnContext;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
+import klim.dclined.NQuadsFactory.NQuads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -156,32 +157,31 @@ public abstract class AbstractClient {
         return mutate(newMutation(Mutation.Builder::setDelNquads, nQuads));
     }
 
+    public CompletableFuture<Map<String, String>> del(NQuads nQuads) {
+        return del(nQuads.toString());
+    }
+
+    public CompletableFuture<Map<String, String>> del(Supplier<NQuads> nQuadsSupplier) {
+        return del(nQuadsSupplier.get());
+    }
+
     public CompletableFuture<Map<String, String>> set(String nQuads) {
         return mutate(newMutation(Mutation.Builder::setSetNquads, nQuads));
     }
 
+    public CompletableFuture<Map<String, String>> set(NQuads nQuads) {
+        return set(nQuads.toString());
+    }
+
+    public CompletableFuture<Map<String, String>> set(Supplier<NQuads> nQuadsSupplier) {
+        return set(nQuadsSupplier.get());
+    }
 
     public CompletableFuture<Map<String, String>> del(NQuad... nQuads) {
         return mutate(newMutation(Mutation.Builder::addDel, nQuads));
     }
 
-    public CompletableFuture<Map<String, String>> del(ArrayNQuadSupplier nQuadsFactory) {
-        return del(nQuadsFactory.get());
-    }
-
-    public CompletableFuture<Map<String, String>> del(SingleNQuadSupplier nQuadFactory) {
-        return del(nQuadFactory.get());
-    }
-
     public CompletableFuture<Map<String, String>> set(NQuad... nQuads) {
         return mutate(newMutation(Mutation.Builder::addSet, nQuads));
-    }
-
-    public CompletableFuture<Map<String, String>> set(ArrayNQuadSupplier nQuadsFactory) {
-        return set(nQuadsFactory.get());
-    }
-
-    public CompletableFuture<Map<String, String>> set(SingleNQuadSupplier nQuadFactory) {
-        return set(nQuadFactory.get());
     }
 }

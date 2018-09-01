@@ -7,7 +7,7 @@ import java.util.Map;
  * @author Michail Klimenkov
  */
 public class Helpers {
-    public static Map<Integer, Long> mergeIdMaps(Map<Integer, Long> src, Map<Integer, Long> dst) {
+    static Map<Integer, Long> mergeIdMaps(Map<Integer, Long> src, Map<Integer, Long> dst) {
         Map<Integer, Long> finalDst = new HashMap<>();
         src.entrySet()
                 .stream()
