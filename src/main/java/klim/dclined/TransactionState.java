@@ -16,15 +16,17 @@ public class TransactionState {
     private final Map<Integer, Long> idsMap;
     private final long startTs;
     private final List<String> keys;
+    private final List<String> preds;
 
     public TransactionState(Map<Integer, Long> idsMap) {
-        this(idsMap, 0, emptyList());
+        this(idsMap, 0, emptyList(), emptyList());
     }
 
-    public TransactionState(Map<Integer, Long> idsMap, long startTs, List<String> keys) {
+    public TransactionState(Map<Integer, Long> idsMap, long startTs, List<String> keys, List<String> preds) {
         this.idsMap = idsMap;
         this.startTs = startTs;
         this.keys = keys;
+        this.preds = preds;
     }
 
     public Map<Integer, Long> getIdsMap() {
@@ -37,6 +39,10 @@ public class TransactionState {
 
     public List<String> getKeys() {
         return keys;
+    }
+
+    public List<String> getPreds() {
+        return preds;
     }
 
     public TransactionState mergeContext(DgraphProto.TxnContext context) {
@@ -55,6 +61,9 @@ public class TransactionState {
         List<String> freshKeys = new ArrayList<>(context.getKeysList());
         freshKeys.addAll(keys);
 
-        return new TransactionState(freshIdsMap, freshStartTs, freshKeys);
+        List<String> freshPreds = new ArrayList<>(context.getPredsList());
+        freshPreds.addAll(preds);
+
+        return new TransactionState(freshIdsMap, freshStartTs, freshKeys, freshPreds);
     }
 }

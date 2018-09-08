@@ -19,7 +19,7 @@ This puts the artifact to your local repository, then just bring it to your proj
 <dependency>
     <groupId>klim.dclined</groupId>
     <artifactId>d-clined</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 </dependency>
 ```
 
@@ -68,15 +68,17 @@ public class Person {
  ```
 The transactional check-n-write would look like this:
 ```
-Class<Map<String, List<Person>>> responseType = (Class<Map<String, List<Person>>>) new TypeToken<Map<String, List<Person>>>(){}.getRawType();
+TypeToken<Map<String, List<Person>>> responseType = new TypeToken<Map<String, List<Person>>>() {};
 
 Transaction transaction = client.newTransaction();
 transaction.query(getPersonByEmail, responseType)
         .thenCompose((Map<String, List<Person>> response) -> {
             //if the person with the email does not exist, create one
             if (response.getOrDefault("starm", emptyList()).isEmpty()) {
+                //define the mutations using nQuad syntax
+                NQuads nQuads = nQuad("_:person", "person.email", "starmaker@mail.com");
                 //create the new person as assumed by the IF statement
-                return transaction.set("_:person <person.email> \"starmaker@mail.com\" .");
+                return transaction.set(nQuads);
             }
             throw new RuntimeException("User already exists");
         }).thenCompose((assigned) -> {

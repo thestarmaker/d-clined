@@ -2,6 +2,7 @@ package klim.dclined;
 
 import com.google.common.base.Supplier;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import com.google.protobuf.ByteString;
 import io.dgraph.DgraphGrpc.DgraphStub;
 import io.dgraph.DgraphProto;
@@ -26,7 +27,6 @@ import static java.util.Collections.emptyMap;
 public abstract class AbstractClient {
 
     protected static final Logger LOG = LoggerFactory.getLogger(AbstractClient.class);
-    private static final Class<String> STRING_CLASS = String.class;
 
     protected static final Gson PARSER = new Gson();
 
@@ -41,7 +41,7 @@ public abstract class AbstractClient {
     abstract Mutation newMutation(BiConsumer<Mutation.Builder, ByteString> stringNQuadSetter, String nQuads);
 
 
-    public <T> CompletableFuture<T> query(String query, Map<String, String> variables, Class<T> type) {
+    public <T> CompletableFuture<T> query(String query, Map<String, String> variables, TypeToken<T> type) {
         TransactionState state = getState();
 
         DgraphProto.LinRead linRead = DgraphProto.LinRead.newBuilder()
@@ -64,20 +64,30 @@ public abstract class AbstractClient {
                     mergeContext(response.getTxn());
 
                     String utf8Str = response.getJson().toStringUtf8();
-                    if (STRING_CLASS.equals(type)) {
+                    if (String.class.isAssignableFrom(type.getRawType())) {
                         return (T) utf8Str;
                     }
-                    return PARSER.fromJson(utf8Str, type);
+                    return PARSER.fromJson(utf8Str, type.getType());
                 });
     }
 
-    public <T> CompletableFuture<T> query(String query, Class<T> type) {
+
+    public <T> CompletableFuture<T> query(String query, TypeToken<T> type) {
         return query(query, emptyMap(), type);
+    }
+
+    public <T> CompletableFuture<T> query(String query, Class<T> type) {
+        return query(query, emptyMap(), TypeToken.get(type));
+    }
+
+    public <T> CompletableFuture<T> query(Supplier<Query> queryFactory, TypeToken<T> type) {
+        Query query = queryFactory.get();
+        return query(query.getQuery(), query.getVariables(), type);
     }
 
     public <T> CompletableFuture<T> query(Supplier<Query> queryFactory, Class<T> type) {
         Query query = queryFactory.get();
-        return query(query.getQuery(), query.getVariables(), type);
+        return query(query.getQuery(), query.getVariables(), TypeToken.get(type));
     }
 
     protected CompletableFuture<Map<String, String>> mutate(Mutation mutation) {
@@ -128,6 +138,7 @@ public abstract class AbstractClient {
         TxnContext context = TxnContext.newBuilder()
                 .setStartTs(state.getStartTs())
                 .addAllKeys(state.getKeys())
+                .addAllPreds(state.getPreds())
                 .setLinRead(linRead)
                 .setAborted(true)
                 .build();
@@ -156,32 +167,31 @@ public abstract class AbstractClient {
         return mutate(newMutation(Mutation.Builder::setDelNquads, nQuads));
     }
 
+    public CompletableFuture<Map<String, String>> del(NQuads nQuads) {
+        return del(nQuads.toString());
+    }
+
+    public CompletableFuture<Map<String, String>> del(Supplier<NQuads> nQuadsSupplier) {
+        return del(nQuadsSupplier.get());
+    }
+
     public CompletableFuture<Map<String, String>> set(String nQuads) {
         return mutate(newMutation(Mutation.Builder::setSetNquads, nQuads));
     }
 
+    public CompletableFuture<Map<String, String>> set(NQuads nQuads) {
+        return set(nQuads.toString());
+    }
+
+    public CompletableFuture<Map<String, String>> set(Supplier<NQuads> nQuadsSupplier) {
+        return set(nQuadsSupplier.get());
+    }
 
     public CompletableFuture<Map<String, String>> del(NQuad... nQuads) {
         return mutate(newMutation(Mutation.Builder::addDel, nQuads));
     }
 
-    public CompletableFuture<Map<String, String>> del(ArrayNQuadSupplier nQuadsFactory) {
-        return del(nQuadsFactory.get());
-    }
-
-    public CompletableFuture<Map<String, String>> del(SingleNQuadSupplier nQuadFactory) {
-        return del(nQuadFactory.get());
-    }
-
     public CompletableFuture<Map<String, String>> set(NQuad... nQuads) {
         return mutate(newMutation(Mutation.Builder::addSet, nQuads));
-    }
-
-    public CompletableFuture<Map<String, String>> set(ArrayNQuadSupplier nQuadsFactory) {
-        return set(nQuadsFactory.get());
-    }
-
-    public CompletableFuture<Map<String, String>> set(SingleNQuadSupplier nQuadFactory) {
-        return set(nQuadFactory.get());
     }
 }

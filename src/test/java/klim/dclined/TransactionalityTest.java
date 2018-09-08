@@ -2,19 +2,21 @@ package klim.dclined;
 
 import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
-import io.dgraph.DgraphGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
+import static klim.dclined.NQuadsFactory.nQuad;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -22,16 +24,14 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 public class TransactionalityTest {
 
-    protected static ManagedChannel channel;
     protected static DClined client;
 
     @BeforeAll
     public static void prepare() {
-        channel = ManagedChannelBuilder.forAddress("localhost", 9080)
+        ManagedChannel channel = ManagedChannelBuilder.forAddress("localhost", 9080)
                 .usePlaintext()
                 .build();
-        DgraphGrpc.DgraphStub stub = DgraphGrpc.newStub(channel);
-        client = new DClined(stub);
+        client = new DClined(channel);
     }
 
     @BeforeEach
@@ -42,7 +42,7 @@ public class TransactionalityTest {
     @AfterAll
     public static void destroy() throws InterruptedException {
         client.dropAll().join();
-        channel.awaitTermination(5, TimeUnit.SECONDS);
+        client.close();
     }
 
     @Test
@@ -201,8 +201,7 @@ public class TransactionalityTest {
 
         final String getPersonByEmail = "{ starm(func: eq(person.email, \"starmaker@mail.com\")) { person.email} }";
 
-        Class<Map<String, List<Person>>> responseType = (Class<Map<String, List<Person>>>) new TypeToken<Map<String, List<Person>>>() {
-        }.getRawType();
+        TypeToken<Map<String, List<Person>>> responseType = new TypeToken<Map<String, List<Person>>>() {};
 
         Transaction transaction = client.newTransaction();
         transaction.query(getPersonByEmail, responseType)
@@ -213,8 +212,10 @@ public class TransactionalityTest {
                         //pretend there is some other chicky write happening in the meantime
                         client.set("_:person <person.email> \"starmaker@mail.com\" .").join();
 
+                        //define the mutations using nQuad syntax
+                        NQuads nQuads = nQuad("_:person", "person.email", "starmaker@mail.com");
                         //create the new person as assumed by the IF statement
-                        return transaction.set("_:person <person.email> \"starmaker@mail.com\" .");
+                        return transaction.set(nQuads);
                     }
                     throw new RuntimeException("User already exists");
                 }).thenCompose((assigned) -> {
