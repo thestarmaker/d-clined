@@ -16,6 +16,7 @@ import java.util.concurrent.ExecutionException;
 
 import static java.lang.String.format;
 import static java.util.Collections.emptyList;
+import static klim.dclined.NQuadsFactory.nQuad;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -200,8 +201,7 @@ public class TransactionalityTest {
 
         final String getPersonByEmail = "{ starm(func: eq(person.email, \"starmaker@mail.com\")) { person.email} }";
 
-        Class<Map<String, List<Person>>> responseType = (Class<Map<String, List<Person>>>) new TypeToken<Map<String, List<Person>>>() {
-        }.getRawType();
+        TypeToken<Map<String, List<Person>>> responseType = new TypeToken<Map<String, List<Person>>>() {};
 
         Transaction transaction = client.newTransaction();
         transaction.query(getPersonByEmail, responseType)
@@ -212,8 +212,10 @@ public class TransactionalityTest {
                         //pretend there is some other chicky write happening in the meantime
                         client.set("_:person <person.email> \"starmaker@mail.com\" .").join();
 
+                        //define the mutations using nQuad syntax
+                        NQuads nQuads = nQuad("_:person", "person.email", "starmaker@mail.com");
                         //create the new person as assumed by the IF statement
-                        return transaction.set("_:person <person.email> \"starmaker@mail.com\" .");
+                        return transaction.set(nQuads);
                     }
                     throw new RuntimeException("User already exists");
                 }).thenCompose((assigned) -> {

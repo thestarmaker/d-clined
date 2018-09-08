@@ -62,6 +62,7 @@ public class Transaction extends AbstractClient {
         TxnContext context = TxnContext.newBuilder()
                 .setStartTs(state.getStartTs())
                 .addAllKeys(state.getKeys())
+                .addAllPreds(state.getPreds())
                 .setLinRead(linRead)
                 .build();
 

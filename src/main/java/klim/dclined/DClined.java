@@ -105,6 +105,7 @@ public class DClined extends AbstractClient implements Closeable {
 
     @Override
     public void close() {
+        LOG.info("Shutting down...");
         channel.shutdown();
     }
 }
