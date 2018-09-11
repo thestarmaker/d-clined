@@ -19,7 +19,7 @@ This puts the artifact to your local repository, then just bring it to your proj
 <dependency>
     <groupId>klim.dclined</groupId>
     <artifactId>d-clined</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
