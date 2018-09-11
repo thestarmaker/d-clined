@@ -1,53 +1,58 @@
+/*
+ * Copyright (C) 2018 Michail Klimenkov
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package klim.dclined;
 
 import io.dgraph.DgraphProto;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 
-import static java.util.Collections.emptyList;
-import static klim.dclined.Helpers.mergeIdMaps;
+import static java.util.Collections.emptySet;
 
 /**
  * @author Michail Klimenkov
  */
 public class TransactionState {
-    private final Map<Integer, Long> idsMap;
     private final long startTs;
-    private final List<String> keys;
-    private final List<String> preds;
+    private final Set<String> keys;
+    private final Set<String> preds;
 
-    public TransactionState(Map<Integer, Long> idsMap) {
-        this(idsMap, 0, emptyList(), emptyList());
+    public TransactionState() {
+        this(0, emptySet(), emptySet());
     }
 
-    public TransactionState(Map<Integer, Long> idsMap, long startTs, List<String> keys, List<String> preds) {
-        this.idsMap = idsMap;
+    public TransactionState(long startTs, Set<String> keys, Set<String> preds) {
         this.startTs = startTs;
         this.keys = keys;
         this.preds = preds;
-    }
-
-    public Map<Integer, Long> getIdsMap() {
-        return idsMap;
     }
 
     public long getStartTs() {
         return startTs;
     }
 
-    public List<String> getKeys() {
+    public Set<String> getKeys() {
         return keys;
     }
 
-    public List<String> getPreds() {
+    public Set<String> getPreds() {
         return preds;
     }
 
     public TransactionState mergeContext(DgraphProto.TxnContext context) {
-        Map<Integer, Long> freshIdsMap = mergeIdMaps(context.getLinRead().getIdsMap(), idsMap);
-
         long freshStartTs;
         if (startTs == 0) {
             freshStartTs = context.getStartTs();
@@ -57,13 +62,12 @@ public class TransactionState {
             freshStartTs = startTs;
         }
 
-        //TODO wtf is this?? is it really additive list? Maybe Set?
-        List<String> freshKeys = new ArrayList<>(context.getKeysList());
+        Set<String> freshKeys = new HashSet<>(context.getKeysList());
         freshKeys.addAll(keys);
 
-        List<String> freshPreds = new ArrayList<>(context.getPredsList());
+        Set<String> freshPreds = new HashSet<>(context.getPredsList());
         freshPreds.addAll(preds);
 
-        return new TransactionState(freshIdsMap, freshStartTs, freshKeys, freshPreds);
+        return new TransactionState(freshStartTs, freshKeys, freshPreds);
     }
 }

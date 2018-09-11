@@ -1,18 +1,29 @@
+/*
+ * Copyright (C) 2018 Michail Klimenkov
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package klim.dclined;
 
 import com.google.protobuf.ByteString;
 import io.dgraph.DgraphGrpc.DgraphStub;
-import io.dgraph.DgraphProto.LinRead;
-import io.dgraph.DgraphProto.LinRead.Sequencing;
 import io.dgraph.DgraphProto.Mutation;
 import io.dgraph.DgraphProto.NQuad;
 import io.dgraph.DgraphProto.TxnContext;
 
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 
 /**
  * @author Michail Klimenkov
@@ -20,13 +31,11 @@ import java.util.function.Consumer;
 public class Transaction extends AbstractClient {
 
     private final DgraphStub stub;
-    private final Consumer<Map<Integer, Long>> idsMapUpdateListener;
     protected final AtomicReference<TransactionState> state;
 
-    Transaction(DgraphStub stub, Consumer<Map<Integer, Long>> idsMapUpdateListener, Map<Integer, Long> idsMap) {
+    Transaction(DgraphStub stub) {
         this.stub = stub;
-        this.idsMapUpdateListener = idsMapUpdateListener;
-        this.state = new AtomicReference<>(new TransactionState(idsMap));
+        this.state = new AtomicReference<>(new TransactionState());
     }
 
 
@@ -54,16 +63,10 @@ public class Transaction extends AbstractClient {
     public CompletableFuture<Void> commit() {
         TransactionState state = this.state.get();
 
-        LinRead linRead = LinRead.newBuilder()
-                .putAllIds(state.getIdsMap())
-                .setSequencing(Sequencing.CLIENT_SIDE)
-                .build();
-
         TxnContext context = TxnContext.newBuilder()
                 .setStartTs(state.getStartTs())
                 .addAllKeys(state.getKeys())
                 .addAllPreds(state.getPreds())
-                .setLinRead(linRead)
                 .build();
 
         StreamObserverBridge<TxnContext> bridge = new StreamObserverBridge<>();
@@ -96,7 +99,6 @@ public class Transaction extends AbstractClient {
     @Override
     protected synchronized void mergeContext(TxnContext context) {
         TransactionState freshState = this.state.get().mergeContext(context);
-        idsMapUpdateListener.accept(freshState.getIdsMap());
         this.state.set(freshState);
     }
 }
