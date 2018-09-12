@@ -4,9 +4,48 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>klim.dclined</groupId>
+    <groupId>com.github.thestarmaker</groupId>
     <artifactId>d-clined</artifactId>
     <version>1.2.0</version>
+    <packaging>pom</packaging>
+
+    <name>D-Clined</name>
+    <description>Java implementation of DGraph client</description>
+    <url>https://github.com/thestarmaker/d-clined</url>
+
+    <organization>
+        <name>com.github.thestarmaker</name>
+        <url>https://github.com/thestarmaker</url>
+    </organization>
+
+    <issueManagement>
+        <system>GitHub</system>
+        <url>https://github.com/thestarmaker/d-clined/issues</url>
+    </issueManagement>
+
+    <licenses>
+        <license>
+            <name>Apache License 2.0</name>
+            <url>https://github.com/thestarmaker/d-clined/blob/master/LICENSE</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <scm>
+        <url>https://github.com/thestarmaker/d-clined</url>
+        <connection>
+            scm:git:git://github.com/thestarmaker/d-clined.git
+        </connection>
+        <developerConnection>
+            scm:git:ssh://git@github.com:thestarmaker/d-clined.git
+        </developerConnection>
+    </scm>
+
+    <developers>
+        <developer>
+            <name>Michail Klimenkov</name>
+        </developer>
+    </developers>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -116,5 +155,34 @@
             </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <profile>
+            <id>release-sign-artifacts</id>
+            <activation>
+                <property>
+                    <name>performRelease</name>
+                    <value>true</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>
