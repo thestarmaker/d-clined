@@ -6,22 +6,21 @@ Neither this project nor the author bear any affiliation with DGraph.
 I will roll it the way I like, take it or leave it! :stuck_out_tongue_winking_eye:
 ## Usage ## 
 ### How do I get it to my project? ###
-I have not published it to Maven Central yet, so you have to build it yourself.
-
+Maven dependency:
+```
+<dependency>
+    <groupId>com.github.thestarmaker</groupId>
+    <artifactId>d-clined</artifactId>
+    <version>1.2.0</version>
+</dependency>
+```
 ### How do I build it locally? ###
 __IMPORTANT - tests assume you have local instance of DGraph running on localhost:9080 and will wipe out all data in database!__
 Project is assembled in Maven (why not?), so run:
 ```
 mvn clean install
 ```
-This puts the artifact to your local repository, then just bring it to your project:
-```
-<dependency>
-    <groupId>klim.dclined</groupId>
-    <artifactId>d-clined</artifactId>
-    <version>1.2.0</version>
-</dependency>
-```
+This puts the artifact to your local repository, then just bring it to your project.
 
 ### How do I configure the client? ###
 ```
