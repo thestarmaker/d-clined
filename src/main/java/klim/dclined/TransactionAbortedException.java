@@ -16,6 +16,9 @@
 package klim.dclined;
 
 /**
+ * Instances of this exception are thrown when a commit is attempted on a transaction,
+ * but a conflict with any other transaction has occured.
+ *
  * @author Michail Klimenkov
  */
 public class TransactionAbortedException extends RuntimeException {

@@ -23,6 +23,8 @@ import java.util.Set;
 import static java.util.Collections.emptySet;
 
 /**
+ * Instances of this class represent state of any transaction.
+ *
  * @author Michail Klimenkov
  */
 public class TransactionState {
@@ -52,6 +54,12 @@ public class TransactionState {
         return preds;
     }
 
+    /**
+     * Merges the provided context into this transaction state instance.
+     *
+     * @param context
+     * @return
+     */
     public TransactionState mergeContext(DgraphProto.TxnContext context) {
         long freshStartTs;
         if (startTs == 0) {

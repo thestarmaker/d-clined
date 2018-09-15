@@ -20,8 +20,10 @@ import io.grpc.stub.StreamObserver;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * @author Michail Klimenkov
+ * This is a bridge from stream observer to completable future.
+ *
  * @param <T> the return type
+ * @author Michail Klimenkov
  */
 public class StreamObserverBridge<T> implements StreamObserver<T> {
 

@@ -30,6 +30,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 
 /**
+ * This is the central object that should be used for interacting with DGraph.
+ * For one-off operations you can use query and mutation methods on this client directly.
+ * For transactional operations create a new transaction first and use the query/mutation methods on the transaction.
+ *
  * @author Michail Klimenkov
  */
 public class DClined extends AbstractClient implements Closeable {
@@ -41,6 +45,12 @@ public class DClined extends AbstractClient implements Closeable {
         this.stub = DgraphGrpc.newStub(channel);
     }
 
+    /**
+     * Creates new transactions. Modifications performed on one transaction are not visible to the other
+     * transactions until the given transaction is committed.
+     *
+     * @return
+     */
     public Transaction newTransaction() {
         return new Transaction(stub);
     }
@@ -51,6 +61,11 @@ public class DClined extends AbstractClient implements Closeable {
         return observerBridge.getDelegate().thenApply((p) -> null);
     }
 
+    /**
+     * Drops all records.
+     *
+     * @return
+     */
     public CompletableFuture<Void> dropAll() {
         Operation operation = Operation.newBuilder()
                 .setDropAll(true)
@@ -59,6 +74,18 @@ public class DClined extends AbstractClient implements Closeable {
         return alter(operation);
     }
 
+    /**
+     * Modifies schema. Example usage:
+     * <pre>
+     *     String schema = "person.email: string @index(hash) @upsert . \n" +
+     *              "person.username: string @index(fulltext) @upsert .";
+     *
+     *     client.schema(schema);
+     * </pre>
+     *
+     * @param schema
+     * @return
+     */
     public CompletableFuture<Void> schema(String schema) {
         Operation operation = Operation.newBuilder()
                 .setSchema(schema)
@@ -67,6 +94,12 @@ public class DClined extends AbstractClient implements Closeable {
         return alter(operation);
     }
 
+    /**
+     * Drops attribute.
+     *
+     * @param command
+     * @return
+     */
     public CompletableFuture<Void> dropAttribute(String command) {
         Operation operation = Operation.newBuilder()
                 .setDropAttr(command)
@@ -108,6 +141,9 @@ public class DClined extends AbstractClient implements Closeable {
         return builder.setCommitNow(true).build();
     }
 
+    /**
+     * Closes this client by shutting down the underlying GRPC channel.
+     */
     @Override
     public void close() {
         LOG.info("Shutting down...");

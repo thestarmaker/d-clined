@@ -37,6 +37,10 @@ import java.util.function.BiConsumer;
 import static java.util.Collections.emptyMap;
 
 /**
+ * This is an abstract client that defines the general interactions. The extending classes
+ * may customise the bahaviour so all operations do or do not happen within the scope
+ * of the same transaction.
+ *
  * @author Michail Klimenkov
  */
 public abstract class AbstractClient {
@@ -45,17 +49,52 @@ public abstract class AbstractClient {
 
     protected static final Gson PARSER = new Gson();
 
+    /**
+     * Retrieves the state of transaction that defines scope for the operation being invoked.
+     *
+     * @return
+     */
     abstract TransactionState getState();
 
+    /**
+     * Retrieves GRPC stub to be used for invocation.
+     *
+     * @return
+     */
     abstract DgraphStub getStub();
 
+    /**
+     * This is a call back that is invoked upon the completion of remote operations.
+     * This should be used for transaction context merging if such is required.
+     *
+     * @param conext
+     */
     abstract void mergeContext(TxnContext conext);
 
     abstract Mutation newMutation(BiConsumer<Mutation.Builder, NQuad> aggregator, NQuad... nQuads);
 
     abstract Mutation newMutation(BiConsumer<Mutation.Builder, ByteString> stringNQuadSetter, String nQuads);
 
-
+    /**
+     * Executes the supplied query with the supplied variables. Example usage:
+     * <pre>
+     * String query = "query getPersonByEmail($email: string) {
+     *      result(func: eq(person.email, $email)) @cascade {
+     *          uid
+     *          person.email
+     *          person.name
+     *      }
+     * }";
+     *
+     * client.query(query, singletonMap("$email", "someone@mail.com"), returnType);
+     * </pre>
+     *
+     * @param query
+     * @param variables
+     * @param type      - TypeToken with the generic type of the expected result. The deserialisation will be handled automatically.
+     * @param <T>
+     * @return
+     */
     public <T> CompletableFuture<T> query(String query, Map<String, String> variables, TypeToken<T> type) {
         TransactionState state = getState();
 
@@ -81,24 +120,64 @@ public abstract class AbstractClient {
     }
 
 
+    /**
+     * Executes the supplied query.
+     *
+     * @param query
+     * @param type  - TypeToken with the generic type of the expected result. The deserialisation will be handled automatically.
+     * @param <T>
+     * @return
+     */
     public <T> CompletableFuture<T> query(String query, TypeToken<T> type) {
         return query(query, emptyMap(), type);
     }
 
+    /**
+     * Executes the supplied query.
+     * Note: if you are using generic collections/wrappers, consider using the TypeToken<T> variant of this method.
+     *
+     * @param query
+     * @param type  - Class of the type of the expected result. The deserialisation will be handled automatically.
+     * @param <T>
+     * @return
+     */
     public <T> CompletableFuture<T> query(String query, Class<T> type) {
         return query(query, emptyMap(), TypeToken.get(type));
     }
 
+    /**
+     * Executes the query supplied by the provided supplier.
+     *
+     * @param queryFactory
+     * @param type         - TypeToken with the generic type of the expected result. The deserialisation will be handled automatically.
+     * @param <T>
+     * @return
+     */
     public <T> CompletableFuture<T> query(Supplier<Query> queryFactory, TypeToken<T> type) {
         Query query = queryFactory.get();
         return query(query.getQuery(), query.getVariables(), type);
     }
 
+    /**
+     * Executes the query supplied by the provided supplier.
+     * Note: if you are using generic collections/wrappers, consider using the TypeToken<T> variant of this method.
+     *
+     * @param queryFactory
+     * @param type         - Class of the type of the expected result. The deserialisation will be handled automatically.
+     * @param <T>
+     * @return
+     */
     public <T> CompletableFuture<T> query(Supplier<Query> queryFactory, Class<T> type) {
         Query query = queryFactory.get();
         return query(query.getQuery(), query.getVariables(), TypeToken.get(type));
     }
 
+    /**
+     * Executes the supplied mutation.
+     *
+     * @param mutation
+     * @return
+     */
     protected CompletableFuture<Map<String, String>> mutate(Mutation mutation) {
         StreamObserverBridge<DgraphProto.Assigned> bridge = new StreamObserverBridge<>();
         DgraphStub stub = getStub();
@@ -136,6 +215,12 @@ public abstract class AbstractClient {
         return new CompletionException(ex);
     }
 
+    /**
+     * Aborts the pending transaction.
+     *
+     * @param stub
+     * @return
+     */
     protected CompletableFuture<Void> abort(DgraphStub stub) {
         TransactionState state = getState();
 
@@ -166,34 +251,83 @@ public abstract class AbstractClient {
                 });
     }
 
+    /**
+     * Executes the delete operation for the supplied nQuads.
+     * @param nQuads
+     * @return
+     */
     public CompletableFuture<Map<String, String>> del(String nQuads) {
         return mutate(newMutation(Mutation.Builder::setDelNquads, nQuads));
     }
 
+    /**
+     * Executes the delete operation for the supplied nQuads.
+     * @param nQuads
+     * @return
+     */
     public CompletableFuture<Map<String, String>> del(NQuads nQuads) {
         return del(nQuads.toString());
     }
 
+    /**
+     * Executes the delete operation for the nQuads supplied by the provided supplier.
+     * @param nQuadsSupplier
+     * @return
+     */
     public CompletableFuture<Map<String, String>> del(Supplier<NQuads> nQuadsSupplier) {
         return del(nQuadsSupplier.get());
     }
 
+    /**
+     * Executes the set operation for the supplied nQuads.
+     * @param nQuads
+     * @return
+     */
     public CompletableFuture<Map<String, String>> set(String nQuads) {
         return mutate(newMutation(Mutation.Builder::setSetNquads, nQuads));
     }
 
+    /**
+     * Executes the set operation for the supplied nQuads.
+     * @param nQuads
+     * @return
+     */
     public CompletableFuture<Map<String, String>> set(NQuads nQuads) {
         return set(nQuads.toString());
     }
 
+    /**
+     * Executes the set operation for the nQuads supplied by the provided supplier.
+     * @param nQuadsSupplier
+     * @return
+     */
     public CompletableFuture<Map<String, String>> set(Supplier<NQuads> nQuadsSupplier) {
         return set(nQuadsSupplier.get());
     }
 
+    /**
+     * Executes the delete operation for the supplied nQuads. Example usage:
+     * <pre>
+     *     NQuads nquads = NQuadsFactory.nQuad("<0x234>", "*", "*").nQuad("0x645", "*", "*");
+     *     client.del(nquads);
+     * </pre>
+     * @param nQuads
+     * @return
+     */
     public CompletableFuture<Map<String, String>> del(NQuad... nQuads) {
         return mutate(newMutation(Mutation.Builder::addDel, nQuads));
     }
 
+    /**
+     * Executes the set operation for the supplied nQuads. Example usage:
+     * <pre>
+     *     NQuads nquads = NQuadsFactory.nQuad("_:person", "email", "person@mail.com")
+     *                                      .nQuad("_:person", "car", "<0x847>");
+     *     client.set(nquads);
+     * </pre>
+     * @param nQuads
+     * @return
+     */
     public CompletableFuture<Map<String, String>> set(NQuad... nQuads) {
         return mutate(newMutation(Mutation.Builder::addSet, nQuads));
     }

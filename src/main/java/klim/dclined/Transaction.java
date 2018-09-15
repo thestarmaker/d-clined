@@ -26,6 +26,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiConsumer;
 
 /**
+ * Instances of this class represent actions that should be executed in transactional manner.
+ * Any modifications performed as part of a transaction are not visible to any other transactions
+ * until the givem transaction is committed.
+ *
  * @author Michail Klimenkov
  */
 public class Transaction extends AbstractClient {
@@ -60,6 +64,11 @@ public class Transaction extends AbstractClient {
     }
 
 
+    /**
+     * Commits the given transaction making any modifications made visible to other subsequent transactions.
+     *
+     * @return
+     */
     public CompletableFuture<Void> commit() {
         TransactionState state = this.state.get();
 
@@ -82,6 +91,11 @@ public class Transaction extends AbstractClient {
                 });
     }
 
+    /**
+     * Aborts this transaction discarding any uncommitted modifications.
+     *
+     * @return
+     */
     public CompletableFuture<Void> abort() {
         return abort(stub);
     }

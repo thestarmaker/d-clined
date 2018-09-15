@@ -20,6 +20,8 @@ import java.util.Map;
 import static java.util.Collections.emptyMap;
 
 /**
+ * Instances of this class represent queries.
+ *
  * @author Michail Klimenkov
  */
 public class Query {
